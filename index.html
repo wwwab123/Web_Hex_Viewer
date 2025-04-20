@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件Hex查看器</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+        .upload-section {
+            margin: 20px 0;
+            padding: 30px;
+            border: 2px dashed #bdc3c7;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .upload-section.drag-over {
+            background-color: #e8f4fc;
+            border-color: #3498db;
+        }
+        .upload-section:hover {
+            border-color: #3498db;
+            background-color: #f8f9fa;
+        }
+        #fileInput {
+            display: none;
+        }
+        .custom-upload-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: inline-block;
+            font-size: 16px;
+        }
+        .custom-upload-btn:hover {
+            background-color: #2980b9;
+        }
+        .drag-hint {
+            margin-top: 15px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .file-info {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .divider {
+            border-top: 2px solid #ddd;
+            margin: 20px 0;
+        }
+        .section-title {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .hex-container {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+            min-height: 20px;
+        }
+        .string-container {
+            font-family: "Courier New", monospace;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: 1px solid #ddd;
+            min-height: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .offset-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        .hex-line {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        .hex-offset {
+            color: #666;
+            margin-right: 15px;
+            min-width: 60px;
+        }
+        .hex-bytes {
+            margin-right: 15px;
+            letter-spacing: 1px;
+        }
+        .hex-chars {
+            color: #333;
+        }
+        .highlight {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            padding: 2px;
+            border-radius: 3px;
+        }
+        .hash-value {
+            font-family: monospace;
+            color: #e74c3c;
+            word-break: break-all;
+        }
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .pagination {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .page-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .page-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .page-info {
+            display: inline-block;
+            margin: 0 10px;
+            min-width: 120px;
+        }
+        .jump-controls {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .jump-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 120px;
+        }
+        .jump-btn {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-controls {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .search-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .search-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-result {
+            margin-top: 10px;
+            text-align: center;
+            color: #7f8c8d;
+        }
+        .empty-placeholder {
+            color: #95a5a6;
+            font-style: italic;
+            text-align: center;
+        }
+        .search-options {
+            display: flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .search-options label {
+            margin-left: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .search-options input[type="checkbox"] {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>文件Hex和字符串查看器</h1>
+
+        <div class="upload-section" id="dropZone">
+            <label class="custom-upload-btn">
+                📁 选择文件
+                <input type="file" id="fileInput">
+            </label>
+            <div class="drag-hint">或直接拖拽文件到此处</div>
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            请上传文件...
+        </div>
+
+        <div class="divider"></div>
+
+        <h2 class="section-title">Hex 视图</h2>
+        <div class="jump-controls">
+            <input type="number" class="jump-input" id="pageInput" placeholder="页码" min="1">
+            <button class="jump-btn" id="jumpPage">跳转</button>
+            <input type="text" class="jump-input" id="offsetInput" placeholder="偏移量">
+            <button class="jump-btn" id="jumpOffset">跳转</button>
+        </div>
+        <div class="hex-container" id="hexView">
+            <div class="empty-placeholder">文件内容将在此显示</div>
+        </div>
+        <div class="pagination">
+            <button class="page-btn" id="prevPage">上一页</button>
+            <span class="page-info" id="pageInfo">第 1 页</span>
+            <button class="page-btn" id="nextPage">下一页</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2 class="section-title">字符串视图</h2>
+        <div class="search-controls">
+            <input type="text" class="search-input" id="stringViewSearchInput" placeholder="搜索字符串">
+            <button class="search-btn" id="stringViewSearchBtn">搜索</button>
+        </div>
+        <div class="search-options">
+            <input type="checkbox" id="caseSensitiveCheckbox">
+            <label for="caseSensitiveCheckbox">区分大小写</label>
+        </div>
+        <div class="search-result" id="stringViewSearchResult"></div>
+        <div class="string-container" id="stringView">
+            <div class="empty-placeholder">可打印字符串将在此显示</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const dropZone = document.getElementById('dropZone');
+            const fileInfo = document.getElementById('fileInfo');
+            const hexView = document.getElementById('hexView');
+            const stringView = document.getElementById('stringView');
+            const prevPageBtn = document.getElementById('prevPage');
+            const nextPageBtn = document.getElementById('nextPage');
+            const pageInfo = document.getElementById('pageInfo');
+            const pageInput = document.getElementById('pageInput');
+            const jumpPageBtn = document.getElementById('jumpPage');
+            const offsetInput = document.getElementById('offsetInput');
+            const jumpOffsetBtn = document.getElementById('jumpOffset');
+            const stringViewSearchInput = document.getElementById('stringViewSearchInput');
+            const stringViewSearchBtn = document.getElementById('stringViewSearchBtn');
+            const stringViewSearchResult = document.getElementById('stringViewSearchResult');
+            const caseSensitiveCheckbox = document.getElementById('caseSensitiveCheckbox');
+            
+            // 分页相关变量
+            let currentPage = 1;
+            let totalPages = 1;
+            const LINES_PER_PAGE = 50;
+            let bytesCache = null;
+            let allStrings = [];
+            let stringSearchResults = [];
+            let isStringSearchMode = false;
+
+            // 文件选择处理
+            fileInput.addEventListener('change', function(e) {
+                handleFiles(e.target.files);
+            });
+
+            // 拖拽上传相关事件
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            ['dragleave', 'dragend'].forEach(type => {
+                dropZone.addEventListener(type, function(e) {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                });
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+
+            // Hex视图分页按钮事件
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayHexView(bytesCache);
+                }
+            });
+
+            nextPageBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayHexView(bytesCache);
+                }
+            });
+
+            // 页码跳转
+            jumpPageBtn.addEventListener('click', () => {
+                const page = parseInt(pageInput.value);
+                if (page && page >= 1 && page <= totalPages) {
+                    currentPage = page;
+                    displayHexView(bytesCache);
+                } else {
+                    alert(`无效页码，请输入1-${totalPages}之间的数字`);
+                }
+            });
+
+            // 偏移量跳转
+            jumpOffsetBtn.addEventListener('click', () => {
+                if (!bytesCache) return;
+                
+                const offsetStr = offsetInput.value.trim();
+                if (!offsetStr) return;
+                
+                // 解析16进制偏移量
+                let offset;
+                try {
+                    offset = parseInt(offsetStr, 16);
+                    if (isNaN(offset)) throw new Error();
+                } catch {
+                    alert('请输入有效的16进制偏移量');
+                    return;
+                }
+                
+                if (offset < 0 || offset >= bytesCache.length) {
+                    alert(`偏移量超出范围(0x0-0x${bytesCache.length.toString(16)})`);
+                    return;
+                }
+                
+                // 计算对应的页码
+                const bytesPerLine = 16;
+                const lineNumber = Math.floor(offset / bytesPerLine);
+                currentPage = Math.floor(lineNumber / LINES_PER_PAGE) + 1;
+                displayHexView(bytesCache);
+                
+                // 高亮目标行
+                setTimeout(() => {
+                    const lines = hexView.querySelectorAll('.hex-line');
+                    const targetLine = lines[lineNumber % LINES_PER_PAGE];
+                    if (targetLine) {
+                        targetLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetLine.style.backgroundColor = '#fffacd';
+                        setTimeout(() => {
+                            targetLine.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                }, 100);
+            });
+
+            // 字符串视图中的搜索
+            stringViewSearchBtn.addEventListener('click', () => {
+                const searchStr = stringViewSearchInput.value.trim();
+                const caseSensitive = caseSensitiveCheckbox.checked;
+                
+                if (!searchStr) {
+                    // 清空搜索时显示全部内容
+                    isStringSearchMode = false;
+                    stringView.textContent = allStrings.join('\n') || '未找到可打印字符串';
+                    stringViewSearchResult.textContent = '';
+                    return;
+                }
+
+                // 根据是否区分大小写进行搜索
+                if (caseSensitive) {
+                    stringSearchResults = allStrings.filter(str => str.includes(searchStr));
+                } else {
+                    const searchStrLower = searchStr.toLowerCase();
+                    stringSearchResults = allStrings.filter(str => 
+                        str.toLowerCase().includes(searchStrLower)
+                    );
+                }
+                
+                isStringSearchMode = true;
+                
+                if (stringSearchResults.length === 0) {
+                    stringViewSearchResult.textContent = '未找到匹配项';
+                    stringView.textContent = '未找到匹配的字符串';
+                } else {
+                    stringViewSearchResult.textContent = `找到 ${stringSearchResults.length} 个匹配项`;
+                    
+                    // 高亮显示搜索结果
+                    const regex = new RegExp(
+                        escapeRegExp(searchStr), 
+                        caseSensitive ? 'g' : 'gi'
+                    );
+                    
+                    const highlightedText = stringSearchResults.join('\n').replace(
+                        regex, 
+                        match => `<span class="highlight">${match}</span>`
+                    );
+                    stringView.innerHTML = highlightedText;
+                }
+            });
+
+            // 辅助函数：转义正则表达式特殊字符
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            // 处理上传的文件
+            function handleFiles(files) {
+                const file = files[0];
+                if (!file) return;
+
+                // 重置状态
+                currentPage = 1;
+                totalPages = 1;
+                bytesCache = null;
+                allStrings = [];
+                stringSearchResults = [];
+                isStringSearchMode = false;
+                updatePaginationUI();
+                stringViewSearchResult.textContent = '';
+                hexView.innerHTML = '<div class="empty-placeholder">文件内容将在此显示</div>';
+                stringView.innerHTML = '<div class="empty-placeholder">可打印字符串将在此显示</div>';
+
+                // 显示基本信息
+                fileInfo.innerHTML = `文件名: <span class="filename">${file.name}</span> | 大小: ${formatFileSize(file.size)} | MD5: <span class="hash-value loading">计算中...</span>`;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processFileData(e.target.result, file.name, file.size);
+                };
+                reader.onerror = function() {
+                    showError('文件读取失败');
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            // 处理文件数据
+            async function processFileData(arrayBuffer, fileName, fileSize) {
+                try {
+                    const bytes = new Uint8Array(arrayBuffer);
+                    bytesCache = bytes;
+                    
+                    // 计算MD5哈希
+                    const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+                    const md5 = CryptoJS.MD5(wordArray).toString();
+                    
+                    // 更新文件信息
+                    fileInfo.innerHTML = `文件名: <span class="filename">${fileName}</span> | 大小: ${formatFileSize(fileSize)} | MD5: <span class="hash-value">${md5}</span>`;
+                    
+                    // 显示Hex视图
+                    displayHexView(bytes);
+                    
+                    // 提取并显示字符串视图
+                    extractAndDisplayStrings(bytes);
+                } catch (error) {
+                    showError('处理文件时出错: ' + error.message);
+                }
+            }
+
+            // 显示Hex视图
+            function displayHexView(bytes) {
+                if (!bytes || bytes.length === 0) {
+                    hexView.innerHTML = '<div class="empty-placeholder">无数据</div>';
+                    return;
+                }
+
+                const bytesPerLine = 16;
+                const startLine = (currentPage - 1) * LINES_PER_PAGE;
+                const startOffset = startLine * bytesPerLine;
+                const endOffset = Math.min(startOffset + (LINES_PER_PAGE * bytesPerLine), bytes.length);
+                totalPages = Math.ceil(bytes.length / (bytesPerLine * LINES_PER_PAGE));
+                
+                let hexContent = '<div class="offset-header">偏移量 | 十六进制数据 | ASCII</div>';
+                
+                for (let i = startOffset; i < endOffset; i += bytesPerLine) {
+                    const lineBytes = bytes.slice(i, Math.min(i + bytesPerLine, bytes.length));
+                    
+                    const hexLine = document.createElement('div');
+                    hexLine.className = 'hex-line';
+                    
+                    // 偏移量
+                    const offset = document.createElement('div');
+                    offset.className = 'hex-offset';
+                    offset.textContent = i.toString(16).padStart(8, '0');
+                    
+                    // Hex字节
+                    const hexBytes = document.createElement('div');
+                    hexBytes.className = 'hex-bytes';
+                    
+                    let hexStr = '';
+                    for (let j = 0; j < bytesPerLine; j++) {
+                        if (j < lineBytes.length) {
+                            hexStr += lineBytes[j].toString(16).padStart(2, '0') + ' ';
+                        } else {
+                            hexStr += '   '; // 填充空格保持对齐
+                        }
+                        
+                        if (j === 7) hexStr += ' ';
+                    }
+                    hexBytes.textContent = hexStr;
+                    
+                    // ASCII字符
+                    const hexChars = document.createElement('div');
+                    hexChars.className = 'hex-chars';
+                    
+                    let charStr = '';
+                    for (let j = 0; j < lineBytes.length; j++) {
+                        const byte = lineBytes[j];
+                        charStr += byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.';
+                    }
+                    hexChars.textContent = charStr;
+                    
+                    hexLine.appendChild(offset);
+                    hexLine.appendChild(hexBytes);
+                    hexLine.appendChild(hexChars);
+                    
+                    hexContent += hexLine.outerHTML;
+                }
+                
+                hexView.innerHTML = hexContent;
+                updatePaginationUI();
+            }
+
+            // 提取并显示字符串
+            function extractAndDisplayStrings(bytes) {
+                if (!bytes || bytes.length === 0) {
+                    stringView.innerHTML = '<div class="empty-placeholder">无数据</div>';
+                    return;
+                }
+
+                // 提取可打印字符串（至少3个连续可打印字符）
+                allStrings = [];
+                let currentStr = '';
+                
+                for (let i = 0; i < bytes.length; i++) {
+                    const byte = bytes[i];
+                    if (byte >= 32 && byte <= 126) {
+                        currentStr += String.fromCharCode(byte);
+                    } else {
+                        if (currentStr.length >= 3) {
+                            allStrings.push(currentStr);
+                        }
+                        currentStr = '';
+                    }
+                }
+                
+                if (currentStr.length >= 3) {
+                    allStrings.push(currentStr);
+                }
+                
+                // 显示全部字符串
+                stringView.textContent = allStrings.join('\n') || '未找到可打印字符串';
+            }
+
+            // 更新分页UI状态
+            function updatePaginationUI() {
+                pageInfo.textContent = `第 ${currentPage} 页/共 ${totalPages} 页`;
+                prevPageBtn.disabled = currentPage <= 1;
+                nextPageBtn.disabled = currentPage >= totalPages;
+                pageInput.value = '';
+                offsetInput.value = '';
+            }
+
+            // 文件大小格式化
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            // 显示错误信息
+            function showError(message) {
+                fileInfo.innerHTML = `<span class="error">❌ ${message}</span>`;
+                hexView.innerHTML = '<div class="empty-placeholder">无法显示内容</div>';
+                stringView.innerHTML = '<div class="empty-placeholder">无法显示内容</div>';
+            }
+        });
+    </script>
+</body>
+</html>
